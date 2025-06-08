@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Список покупок</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 600px;
+            margin: auto;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 5px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 5px 10px;
+            font-size: 14px;
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        li {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.3s;
+        }
+
+        li.bought {
+            color: gray;
+            text-decoration: line-through;
+            background-color: #f0f0f0;
+        }
+
+        .bought-info {
+            margin-left: 15px;
+            font-style: italic;
+            color: gray;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 5px;
+        }
+    </style>
+</head>
+<body>
+<h1>Список покупок</h1>
+
+<form id="addForm">
+    <input type="text" id="itemName" placeholder="Новый товар" required />
+    <button type="submit">Добавить</button>
+</form>
+
+<ul id="shoppingList"></ul>
+
+<script>
+    const API_URL = '/api/items';
+    const listEl = document.getElementById('shoppingList');
+    const form = document.getElementById('addForm');
+    const input = document.getElementById('itemName');
+
+    async function fetchItems() {
+        const response = await fetch(API_URL);
+        const items = await response.json();
+        listEl.innerHTML = '';
+        items.forEach(item => {
+            const li = document.createElement('li');
+            if (item.purchased) li.classList.add('bought');
+
+            const textSpan = document.createElement('span');
+            textSpan.textContent = item.name;
+
+            if (item.purchased) {
+                const info = document.createElement('span');
+                info.className = 'bought-info';
+                info.textContent = '(Куплено)';
+                textSpan.appendChild(info);
+            }
+
+            const buttonsDiv = document.createElement('div');
+            buttonsDiv.className = 'buttons';
+
+            const buyBtn = document.createElement('button');
+            buyBtn.textContent = item.purchased ? 'Отменить' : 'Куплено';
+            buyBtn.onclick = () => toggleBought(item.id);
+
+            const delBtn = document.createElement('button');
+            delBtn.textContent = 'Удалить';
+            delBtn.onclick = () => deleteItem(item.id);
+
+            buttonsDiv.appendChild(buyBtn);
+            buttonsDiv.appendChild(delBtn);
+
+            li.appendChild(textSpan);
+            li.appendChild(buttonsDiv);
+            listEl.appendChild(li);
+        });
+    }
+
+    async function addItem(name) {
+        await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' }, // Отправляем просто строку
+            body: name
+        });
+        input.value = '';
+        await fetchItems();
+    }
+
+    async function deleteItem(id) {
+        await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+        await fetchItems();
+    }
+
+    async function toggleBought(id) {
+        await fetch(`${API_URL}/${id}/toggle`, { method: 'PATCH' });
+        await fetchItems();
+    }
+
+    form.onsubmit = e => {
+        e.preventDefault();
+        addItem(input.value);
+    };
+
+    fetchItems();
+</script>
+</body>
+</html>
